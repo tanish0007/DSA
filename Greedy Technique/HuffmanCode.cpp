@@ -1,169 +1,114 @@
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 
-#define MAX_TREE_HT 100
 #define MAX_CHAR 256
 
-struct MinHeapNode {
-    char data;
-    unsigned freq;
-    MinHeapNode *left, *right;
+struct Node {
+    char ch;
+    int freq;
+    Node *left, *right;
 };
 
-struct MinHeap {
-    unsigned size;
-    unsigned capacity;
-    MinHeapNode **array;
+struct ListNode {
+    Node *tree;
+    ListNode *next;
 };
 
-MinHeapNode* newNode(char data, unsigned freq) {
-    MinHeapNode* temp = new MinHeapNode;
-    temp->left = temp->right = NULL;
-    temp->data = data;
-    temp->freq = freq;
-    return temp;
+ListNode* create_list_node(Node *tree) {
+    ListNode *ln = (ListNode*)malloc(sizeof(ListNode));
+    ln->tree = tree;
+    ln->next = NULL;
+    return ln;
 }
 
-MinHeap* createMinHeap(unsigned capacity) {
-    MinHeap* minHeap = new MinHeap;
-    minHeap->size = 0;
-    minHeap->capacity = capacity;
-    minHeap->array = new MinHeapNode*[capacity];
-    return minHeap;
-}
-
-void swapMinHeapNode(MinHeapNode** a, MinHeapNode** b) {
-    MinHeapNode* t = *a;
-    *a = *b;
-    *b = t;
-}
-
-void minHeapify(MinHeap* minHeap, int idx) {
-    int smallest = idx;
-    int left = 2 * idx + 1;
-    int right = 2 * idx + 2;
-    if (left < minHeap->size &&
-        minHeap->array[left]->freq < minHeap->array[smallest]->freq)
-        smallest = left;
-    if (right < minHeap->size &&
-        minHeap->array[right]->freq < minHeap->array[smallest]->freq)
-        smallest = right;
-    if (smallest != idx) {
-        swapMinHeapNode(&minHeap->array[smallest], &minHeap->array[idx]);
-        minHeapify(minHeap, smallest);
+void insert_sorted(ListNode **head, Node *tree) {
+    ListNode *new_node = create_list_node(tree);
+    if (*head == NULL || tree->freq < (*head)->tree->freq) {
+        new_node->next = *head;
+        *head = new_node;
+        return;
     }
-}
-
-bool isSizeOne(MinHeap* minHeap) {
-    return (minHeap->size == 1);
-}
-
-MinHeapNode* extractMin(MinHeap* minHeap) {
-    MinHeapNode* temp = minHeap->array[0];
-    minHeap->array[0] = minHeap->array[minHeap->size - 1];
-    --minHeap->size;
-    minHeapify(minHeap, 0);
-    return temp;
-}
-
-void insertMinHeap(MinHeap* minHeap, MinHeapNode* minHeapNode) {
-    ++minHeap->size;
-    int i = minHeap->size - 1;
-    while (i && minHeapNode->freq < minHeap->array[(i - 1)/2]->freq) {
-        minHeap->array[i] = minHeap->array[(i - 1)/2];
-        i = (i - 1)/2;
+    ListNode *curr = *head;
+    while (curr->next != NULL && curr->next->tree->freq <= tree->freq) {
+        curr = curr->next;
     }
-    minHeap->array[i] = minHeapNode;
+    new_node->next = curr->next;
+    curr->next = new_node;
 }
 
-void buildMinHeap(MinHeap* minHeap) {
-    int n = minHeap->size - 1;
-    int i;
-    for (i = (n - 1)/2; i >= 0; --i)
-        minHeapify(minHeap, i);
+Node* extract_min(ListNode **head) {
+    if (*head == NULL) return NULL;
+    ListNode *min_node = *head;
+    *head = (*head)->next;
+    Node *min_tree = min_node->tree;
+    free(min_node);
+    return min_tree;
 }
 
-void printArr(int arr[], int n) {
-    for (int i = 0; i < n; ++i)
-        std::cout << arr[i];
-    std::cout << "\n";
-}
-
-bool isLeaf(MinHeapNode* root) {
-    return !(root->left) && !(root->right);
-}
-
-MinHeap* createAndBuildMinHeap(char data[], int freq[], int size) {
-    MinHeap* minHeap = createMinHeap(size);
-    for (int i = 0; i < size; ++i)
-        minHeap->array[i] = newNode(data[i], freq[i]);
-    minHeap->size = size;
-    buildMinHeap(minHeap);
-    return minHeap;
-}
-
-MinHeapNode* buildHuffmanTree(char data[], int freq[], int size) {
-    MinHeapNode *left, *right, *top;
-    MinHeap* minHeap = createAndBuildMinHeap(data, freq, size);
-    while (!isSizeOne(minHeap)) {
-        left = extractMin(minHeap);
-        right = extractMin(minHeap);
-        top = newNode('$', left->freq + right->freq);
-        top->left = left;
-        top->right = right;
-        insertMinHeap(minHeap, top);
-    }
-    return extractMin(minHeap);
-}
-
-void printCodes(MinHeapNode* root, int arr[], int top) {
+void get_codes(Node *root, int code[], int depth) {
     if (root->left) {
-        arr[top] = 0;
-        printCodes(root->left, arr, top + 1);
+        code[depth] = 0;
+        get_codes(root->left, code, depth+1);
     }
     if (root->right) {
-        arr[top] = 1;
-        printCodes(root->right, arr, top + 1);
+        code[depth] = 1;
+        get_codes(root->right, code, depth+1);
     }
-    if (isLeaf(root)) {
-        std::cout << root->data << ": ";
-        printArr(arr, top);
+    if (!root->left && !root->right) {
+        std::cout << root->ch << ": ";
+        for (int i = 0; i < depth; ++i)
+            std::cout << code[i];
+        std::cout << "\n";
     }
 }
 
-void HuffmanCodes(char data[], int freq[], int size) {
-    MinHeapNode* root = buildHuffmanTree(data, freq, size);
-    int arr[MAX_TREE_HT], top = 0;
-    printCodes(root, arr, top);
-}
-
-void countFreq(const char str[], char data[], int freq[], int &size) {
-    int count[MAX_CHAR] = {0};
+void count_freq(const char str[], char chars[], int freq[], int &n) {
+    int temp[MAX_CHAR] = {0};
     int len = strlen(str);
     for (int i = 0; i < len; ++i)
-        count[(unsigned char)str[i]]++;
-    size = 0;
+        temp[(unsigned char)str[i]]++;
+    n = 0;
     for (int i = 0; i < MAX_CHAR; ++i) {
-        if (count[i] > 0) {
-            data[size] = (char)i;
-            freq[size] = count[i];
-            size++;
+        if (temp[i] > 0) {
+            chars[n] = (char)i;
+            freq[n] = temp[i];
+            n++;
         }
     }
 }
 
+void huffman(char chars[], int freq[], int n) {
+    ListNode *pq = NULL;
+    for (int i = 0; i < n; ++i) {
+        Node *leaf = (Node*)malloc(sizeof(Node));
+        leaf->ch = chars[i];
+        leaf->freq = freq[i];
+        leaf->left = NULL;
+        leaf->right = NULL;
+        insert_sorted(&pq, leaf);
+    }
+    for (int i = 1; i < n; ++i) {
+        Node *x = extract_min(&pq);
+        Node *y = extract_min(&pq);
+        Node *z = (Node*)malloc(sizeof(Node));
+        z->ch = 0;
+        z->freq = x->freq + y->freq;
+        z->left = x;
+        z->right = y;
+        insert_sorted(&pq, z);
+    }
+    int code[MAX_CHAR], depth = 0;
+    get_codes(pq->tree, code, depth);
+}
+
 int main() {
     char str[100];
-    std::cout << "Enter string to encode: ";
+    std::cout << "Enter string: ";
     std::cin.getline(str, 100);
-
-    char data[MAX_CHAR];
-    int freq[MAX_CHAR];
-    int size = 0;
-    countFreq(str, data, freq, size);
-
-    std::cout << "Huffman Codes are:\n";
-    HuffmanCodes(data, freq, size);
-
+    char chars[MAX_CHAR];
+    int freq[MAX_CHAR], n;
+    count_freq(str, chars, freq, n);
+    huffman(chars, freq, n);
     return 0;
 }
