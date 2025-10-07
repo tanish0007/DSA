@@ -7,7 +7,7 @@ int binarySearch(int *array, int start, int end, int target){
     if(start > end) return -1;
 
     int mid = (start + end) / 2;
-    if(array[mid] == target) return mid+1;
+    if(array[mid] == target) return mid;
     else if(array[mid] > target) binarySearch(array, start, mid-1, target);
     else binarySearch(array, mid+1, end, target);
 }
